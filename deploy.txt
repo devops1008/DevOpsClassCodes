@@ -1,0 +1,530 @@
+#!/bin/bash
+home=${p:resource/mountpoint}
+# check based on env
+dir="directories"
+base_dir=$PWD
+
+if [ -d "$PWD/$dir" -a ! -h "$PWD/$dir" ]
+then
+echo "$dir found"
+else
+echo "Folder does not exist"
+fi
+
+if [ $home = '/appdata01' ]
+then
+CC="data/BE/CREDIT_CHECK/Scripts"
+BE="data/BE/Scripts"
+
+cp -p $PWD/$dir/{Del_files.sh,Split_Feedback_File.sh,CC_*.sh} ${p:resource/mountpoint}/$CC 2>${p:resource/mountpoint}/$CC/Error.txt
+cp -p $PWD/$dir/{File_Purge.sh,File_Purge_dump.sh,BE_*.sh} ${p:resource/mountpoint}/$BE 2>${p:resource/mountpoint}/$BE/Error.txt
+chmod 755 ${p:resource/mountpoint}/$CC/*.sh
+chmod 755 ${p:resource/mountpoint}/$BE/*.sh
+rm -f ${p:resource/mountpoint}/$CC/Error.txt
+rm -f ${p:resource/mountpoint}/$BE/Error.txt
+
+elif [ $home = '/u01' ]
+then
+CC="data/BE/CREDIT_CHECK/Scripts"
+BE="data/BE/Scripts"
+
+cp -p $PWD/$dir/{Del_files.sh,Split_Feedback_File.sh,CC_*.sh} ${p:resource/mountpoint}/$CC 2>${p:resource/mountpoint}/$CC/Error.txt
+cp -p $PWD/$dir/{File_Purge.sh,File_Purge_dump.sh,BE_*.sh} ${p:resource/mountpoint}/$BE 2>${p:resource/mountpoint}/$BE/Error.txt
+chmod 755 ${p:resource/mountpoint}/$CC/*.sh
+chmod 755 ${p:resource/mountpoint}/$BE/*.sh
+rm -f ${p:resource/mountpoint}/$CC/Error.txt
+rm -f ${p:resource/mountpoint}/$BE/Error.txt
+
+ elif [ $home = '/ODI/BIL' ]
+	then
+	CC="CREDIT_CHECK/Scripts"
+BE="Scripts"
+
+cp -p $PWD/$dir/{Del_files.sh,Split_Feedback_File.sh,CC_*.sh} ${p:resource/mountpoint}/$CC 2>${p:resource/mountpoint}/$CC/Error.txt
+cp -p $PWD/$dir/{File_Purge.sh,File_Purge_dump.sh,BE_*.sh} ${p:resource/mountpoint}/$BE 2>${p:resource/mountpoint}/$BE/Error.txt
+chmod 755 ${p:resource/mountpoint}/$CC/*.sh
+chmod 755 ${p:resource/mountpoint}/$BE/*.sh
+rm -f ${p:resource/mountpoint}/$CC/Error.txt
+rm -f ${p:resource/mountpoint}/$BE/Error.txt
+
+ elif [ $home = '/BIL' ]
+then
+CC="CREDIT_CHECK/Scripts"
+BE="Scripts"
+cp -p $PWD/$dir/{Del_files.sh,Split_Feedback_File.sh,CC_*.sh} ${p:resource/mountpoint}/$CC 2>${p:resource/mountpoint}/$CC/Error.txt
+cp -p $PWD/$dir/{File_Purge.sh,File_Purge_dump.sh,BE_*.sh} ${p:resource/mountpoint}/$BE 2>${p:resource/mountpoint}/$BE/Error.txt
+chmod 755 ${p:resource/mountpoint}/$CC/*.sh
+chmod 755 ${p:resource/mountpoint}/$BE/*.sh
+rm -f ${p:resource/mountpoint}/$CC/Error.txt
+rm -f ${p:resource/mountpoint}/$BE/Error.txt
+else
+exit
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+------------------------------
+
+
+#!/bin/bash
+dir="db_scripts"
+WORK_DIR=$PWD
+FILE=DBOUT_`date +"%d-%m-%Y-%H-%M"`.txt
+
+export ORACLE_HOME=${p:resource/ORACLE.HOME}
+set TNS_ADMIN=${p:resource/TNS.ADMIN}
+
+if [ -d "$dir" -a ! -h "$dir" ]
+then
+   echo "$dir found"
+   cd ${p:resource/deployables}/db_scripts
+   if [ -e ${p:resource/BEsql} ]
+   then
+     echo "Files exists"
+     export ORACLE_SID=${p:resource/sid}
+     ORAENV_ASK="NO"
+     echo $ORACLE_SID
+     echo ${ORACLE_HOME}
+     ${ORACLE_HOME}/bin/sqlplus ${p:resource/schema}/${p:resource/schemapassword}@${p:resource/sid} <<EOF
+	 spool $WORK_DIR/$FILE
+     @${p:resource/BEsql}
+	 spool off
+	 exit
+EOF
+if [ -e $WORK_DIR/$FILE ]
+then
+     grep -e "ORA-" $WORK_DIR/$FILE | grep -v "ORA-00955" | grep -v "ORA-00001"
+     EXIT_STATUS=$?
+     if [ "$EXIT_STATUS" -eq "0" ]
+     then
+     echo "please check $WORK_DIR/$FILE for log"
+		exit 1
+				#grep -e "ORA-" DBOUT.txt|grep -v "ORA-00955"|tail -n 1
+	 else
+		exit 0
+	 fi
+   else
+		echo "Not connected to DB" >  $WORK_DIR/$FILE
+        echo "please check $WORK_DIR/$FILE for log"
+        exit 1
+        fi
+  else
+    echo "No sql file to run"
+	exit
+   fi
+else
+echo "nothing to do"
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--------------------------
+
+#!/bin/bash
+dir="db_scripts"
+WORK_DIR=$PWD
+FILE=DBOUTENV_`date +"%d-%m-%Y-%H-%M"`.txt
+
+
+export ORACLE_HOME=${p:resource/ORACLE.HOME}
+set TNS_ADMIN=${p:resource/TNS.ADMIN}
+
+if [ -d "$dir" -a ! -h "$dir" ]
+then
+   echo "$dir found"
+   cd ${p:resource/deployables}/db_scripts
+if [ -e ${p:resource/envisql} ]
+then
+    echo "Files exists"
+    export ORACLE_SID=${p:resource/sid}
+        ORAENV_ASK="NO"
+        echo $ORACLE_SID
+        ${ORACLE_HOME}/bin/sqlplus ${p:resource/schema}/${p:resource/schemapassword}@${p:resource/sid} <<EOF
+		spool $WORK_DIR/$FILE
+        @${p:resource/envisql}
+		spool off
+        exit 
+EOF
+
+if [ -e $WORK_DIR/$FILE ]
+then
+     exit 0
+	 else
+		echo "Not connected to DB" >  $WORK_DIR/$FILE
+        echo "please check $WORK_DIR/$FILE for log"
+        exit 1
+        fi		
+
+else
+    echo "sql file does not exist."
+fi
+
+else
+    echo "db_script folder does not exist."
+fi	
+
+
+
+-----------------------
+
+
+
+#!/bin/bash
+dir="topology"
+base_dir=$PWD
+WORK_DIR=${p:resource/workdir}
+beg=`echo '<![CDATA['`
+end=`echo ']]>'`
+
+
+if [ -d "$base_dir/$dir" -a ! -h "$base_dir/$dir" ]
+then
+   echo "$dir found"
+if [ -d "$base_dir/$dir/physical" -a ! -h "$base_dir/$dir/physical" ]   
+then
+echo "physical dir found"
+propfile=`find $base_dir/$dir/physical/ -maxdepth 1 -name "Conn_${p:resource/envi}.properties"`
+#propfile=`find . -maxdepth 1 -name "Conn_${p:resource/envi}.properties"`
+actualpropfile=`echo ${propfile#*/}`
+echo "actual file is $actualpropfile"
+
+#below block is to handle agent
+
+if ls $base_dir/$dir/physical/AGENT*.xml 1> /dev/null 2>&1; then
+    echo "physical agent exist"
+pagentname=`ls $base_dir/$dir/physical/AGENT*.xml`
+pi=`basename $pagentname`
+echo $pi
+
+agentapp=`grep -m 1 "ApplicationName" $pagentname`
+agentapp1=`echo ${agentapp#*[}`
+agentapp2=`echo ${agentapp1#*[}`
+agentapp3=`echo ${agentapp2%]*}`
+finalapp=`echo ${agentapp3%]*}`
+echo $finalapp
+
+
+
+agenthost=`grep -m 1 "HostName" $pagentname`
+agent1=`echo ${agenthost#*[}`
+agent2=`echo ${agent1#*[}`
+agent3=`echo ${agent2%]*}`
+finalagent=`echo ${agent3%]*}`
+echo $finalagent
+
+
+agentport=`grep -m 1 "HostPort" $pagentname`
+agentp1=`echo ${agentport#*[}`
+agentp2=`echo ${agentp1#*[}`
+agentp3=`echo ${agentp2%]*}`
+finalport=`echo ${agentp3%]*}`
+echo $finalport
+
+
+agentprot=`grep -m 1 "Protocol" $pagentname`
+agentp1=`echo ${agentprot#*[}`
+agentp2=`echo ${agentp1#*[}`
+agentp3=`echo ${agentp2%]*}`
+finalprot=`echo ${agentp3%]*}`
+echo $finalprot
+
+
+replaceaapp=`grep AGENT /$actualpropfile | cut -d '>' -f 2`
+echo "agent app to be replaced is $replaceaapp"
+replaceahost=`grep AGENT /$actualpropfile | cut -d '>' -f 3`
+echo "agent host to be replaced is $replaceahost"
+replaceaport=`grep AGENT /$actualpropfile | cut -d '>' -f 4`
+echo "agent port to be replaced is $replaceaport"
+replaceaprot=`grep AGENT /$actualpropfile | cut -d '>' -f 5`
+echo "agent port to be replaced is $replaceaprot"
+
+
+
+
+sed -i.bak -e "{s#${finalapp}#${replaceaapp}#g} ; {18s#${finalagent}#${replaceahost}#} ; {19s#${finalport}#${replaceaport}#} ; {30s#${finalprot}#${replaceaprot}#} " $pagentname
+echo "i am inserting physical agent"
+$WORK_DIR/startcmd.sh "-INSTANCE=${p:resource/instance_name}" OdiImportObject "-FILE_NAME=$base_dir/$dir/physical/$pi" "-WORK_REP_NAME=${p:resource/work_repo}" "-IMPORT_MODE=SYNONYM_INSERT_UPDATE"
+echo "i am done inserting physical agent"
+fi
+
+
+for i in `ls $base_dir/$dir/physical/CONN*.xml`
+do
+echo "filename is $i"
+    driver=`grep -m 1 "JavaDriver" $i`
+    driver1=`echo ${driver#*[}`
+    driver2=`echo ${driver1#*[}`
+    driver3=`echo ${driver2%]*}`
+    finaldriver=`echo ${driver3%]*}`
+#    echo -e "the driver is $finaldriver\n"
+name=`basename $i`
+stripfilename=`echo $name | cut -d '.' -f 1`
+echo "strip file is $stripfilename"
+    if [ $finaldriver = "oracle.jdbc.driver.OracleDriver" ] || [ $finaldriver = "oracle.jdbc.OracleDriver" ]; then
+                #
+                # Extract the JDBC String from the input CONN file
+                #stripfilename=`echo $name | cut -d '.' -f 1`
+                echo -e "I am in JDBC Driver BLOCK\n"
+                jdbcstring=`grep -m 1 "jdbc:oracle:thin" $i`
+                jdbc1=`echo ${jdbcstring#*[}`
+                jdbc2=`echo ${jdbc1#*[}`
+                jdbc3=`echo ${jdbc2%]*}`
+                finaljdbc=`echo ${jdbc3%]*}`
+                echo -e "the actual jdbc on the file $i is $finaljdbc\n"
+ 	        # Extract username from input CONN file
+                echo -e "I am in username BLOCK\n"
+                userstring=`grep -m 1 "UserName" $i`
+                user1=`echo ${userstring#*[}`
+                user2=`echo ${user1#*[}`
+                user3=`echo ${user2%]*}`
+                finaluser=`echo ${user3%]*}`
+                echo -e "the actual username on the file $i is $finaluser\n"
+                #
+				# Extract schema from input CONN file
+                echo -e "I am in schema name BLOCK\n"
+                schemastring=`grep -m 1 "schemaName" $i`
+                schema1=`echo ${schemastring#*[}`
+                schema2=`echo ${schema1#*[}`
+                schema3=`echo ${schema2%]*}`
+                finalschema=`echo ${schema3%]*}`
+                echo -e "the actual schema on the file $i is $finalschema\n"
+		#
+		# Extract schema from input CONN file
+                echo -e "I am in schema name BLOCK\n"
+                wschemastring=`grep -m 1 "WschemaName" $i`
+                wschema1=`echo ${wschemastring#*[}`
+                wschema2=`echo ${wschema1#*[}`
+                wschema3=`echo ${wschema2%]*}`
+                finalwschema=`echo ${wschema3%]*}`
+                echo -e "the actual work schema on the file $i is $finalwschema\n"
+		#	
+                #
+                # Extract password from input CONN file
+                # This is not needed for ODI12c as when you export Connection from ODI it was not populating password in export file.
+                echo -e "I am in pass BLOCK\n"
+                passstring=`grep -m 1 "Pass" $i`
+                #echo "Passstring:" $passstring
+                pass1=`echo ${passstring#*[}`
+                #echo "pass1:" $pass1
+                pass2=`echo ${pass1#*[}`
+                #echo "pass2:" $pass2
+                pass3=`echo ${pass2%]*}`
+                #echo "pass3:" $pass3
+                finalpass=`echo ${pass3%]*}`
+                #echo "finalpass:" $finalpass
+                echo -e "the actual password on the file $i is $finalpass\n"
+                # Assign null as password cause it has only null value in password field.
+                finalpass="null"
+                echo "finalpass:" $finalpass
+		var=0
+                        while read connname || [[ -n $connname ]];
+                        do
+                                echo -e "I am in conn name loop\n"
+                                echo "The ConnName is :" $connname
+                                echo -e "the connection file is $connname\n"
+                                test1=`echo $connname | cut -d '.' -f 1`
+                                echo "Connection Name is "$connname
+                                echo "TEST1 is :" $test1
+                                replacejdbc=`echo $connname | cut -d '>' -f 2`
+                                replaceuser=`echo $connname | cut -d '>' -f 3`
+                                replacepass=`echo $connname | cut -d '>' -f 4`
+								replaceschema=`echo $connname | cut -d '>' -f 5`
+								replacewschema=`echo $connname | cut -d '>' -f 6`
+                                echo -e "the jdbc to be replaced is $replacejdbc\n"
+                                echo -e "the user to be replaced is $replaceuser\n"
+                                echo -e "the pass to be replaced is $replacepass\n"
+								echo -e "the schema to be replaced is $replaceschema\n"
+                                echo -e "the wschema to be replaced is $replacewschema\n"
+                                #safereplacejdbc=$(printf '%s\n' "$replacejdbc" | sed 's/[[\.*^$/]/\\&/g')
+                                #safereplacejdbc="$replacejdbc"
+                                #echo "Safereplace:" $safereplacejdbc
+                                #echo "Test File is:" $test1 "and StripFilename is "$stripfilename
+                                echo "strip file name is $stripfilename"
+				if [ "$test1" == "$stripfilename" ]; then
+                                echo "replacing the jdbc url"
+                                echo $name
+                                echo "Final JDBC:"$finaljdbc
+                                echo "Replace JDBC" $replacejdbc
+                                echo "Final User:"$finaluser
+                                echo "Replace User:"$replaceuser
+                                echo "Final Pass:"$finalpass
+                                #cd $ODI_HOME/bin
+                                encpass1=`$WORK_DIR/encode.sh "-INSTANCE=OracleDIAgent1" $replacepass`
+                                #echo "Orgin encode:" $encpass1
+                                #encpass=`echo $encpass1 | cut -d '=' -f 2-6  | cut -d ' ' -f 2-6`
+                                encpass2=`echo $encpass1 | awk -F' '  '{print $NF}'`
+                                encpass=$beg$encpass2$end
+
+				echo "EncodePassword is:"$encpass
+
+       sed  -i.bak -e "{s#${finaljdbc}#${replacejdbc}#g} ; {57s#${finaluser}#${replaceuser}#} ; {54s#${finalpass}#${encpass}#} ; {113s#${finalschema}#${replaceschema}#} ; {119s#${finalwschema}#${replacewschema}#} " $i
+#	   sed -e "s/
+#//" < $i > $base_dir/$dir/physical/temp.xml
+#         mv $base_dir/$dir/physical/temp.xml $i
+       #sed -e 's/a/b/g ; s/b/d/g' file
+#       sed -i.bak -- "{66s#${finaljdbc}#${safereplacejdbc}#};{55s#${finaluser}#${replaceuser}#};{52s#${finalpass}#${encpass}#}" $CODE_DIR/$name
+
+                # echo" #${finaljdbc}#${safereplacejdbc}#g;{40s#${finaluser}#${replaceuser}#};{39s#${finalpass}#${encpass}#}"
+break
+                                fi
+                        var=`expr $var + 1`
+                        echo "the counter for file $name is $var"
+                        done < /$actualpropfile
+
+
+    fi
+
+$WORK_DIR/startcmd.sh "-INSTANCE=${p:resource/instance_name}" OdiImportObject "-FILE_NAME=$i" "-WORK_REP_NAME=${p:resource/work_repo}" "-IMPORT_MODE=SYNONYM_INSERT_UPDATE"
+done
+
+else
+   echo "Nothing to do Physical."
+fi
+
+else
+   echo "Nothing to do topology."
+fi
+
+
+
+
+
+
+
+
+
+---------------------------
+
+
+#!/bin/bash
+dir="topology"
+
+if [ -d "$dir" -a ! -h "$dir" ]
+then
+   echo "$dir found"
+if [ -d "${p:resource/logical}" -a ! -h "${p:resource/logical}" ]   
+then
+echo "$dir found"
+for i in `ls ${p:resource/logical}/*.xml`
+do
+echo "filename is $i"
+#cd ${p:resource/domain}
+sh ${p:resource/domain}/startcmd.sh "-INSTANCE=${p:resource/instance_name}" OdiImportObject "-FILE_NAME=$i" "-WORK_REP_NAME=${p:resource/work_repo}" "-IMPORT_MODE=SYNONYM_INSERT_UPDATE"
+done
+else
+   echo "Nothing to do Logical."
+fi
+else
+   echo "Nothing to do topology."
+fi
+
+
+
+
+
+
+
+
+
+
+-------------------------
+
+
+dir="topology"
+
+if [ -d "$dir" -a ! -h "$dir" ]
+then
+   echo "$dir found"
+if [ -d "${p:resource/context}" -a ! -h "${p:resource/context}" ]
+then
+echo "$dir found"
+for i in `ls ${p:resource/context}/*.xml`
+do
+sh ${p:resource/domain}/startcmd.sh "-INSTANCE=${p:resource/instance_name}" OdiImportObject "-FILE_NAME=$i" "-WORK_REP_NAME=${p:resource/work_repo}" "-IMPORT_MODE=SYNONYM_INSERT_UPDATE"
+done
+else
+   echo "Found Context."
+fi
+else
+   echo "Nothing to do it."
+fi
+
+
+
+
+
+
+
+
+
+--------------------------
+
+#!/bin/bash
+dir="scenarios"
+
+if [ -d "$dir" -a ! -h "$dir" ]
+then
+   echo "$dir found"
+for i in `ls ${p:resource/deployables}/scenarios/*.xml`
+do
+sh ${p:resource/domain}/startcmd.sh "-INSTANCE=${p:resource/instance_name}" OdiImportObject "-FILE_NAME=$i" "-WORK_REP_NAME=${p:resource/work_repo}" "-IMPORT_MODE=SYNONYM_INSERT_UPDATE"
+
+done 
+
+else
+   echo "Nothing to do scenarios."
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+--------------------------
+
+#!/bin/bash
+dir="loadplan"
+
+if [ -d "$dir" -a ! -h "$dir" ]
+then
+   echo "$dir found"
+for i in `ls ${p:resource/deployables}loadplan/*.xml`
+do
+sh ${p:resource/domain}/startcmd.sh "-INSTANCE=${p:resource/instance_name}" OdiImportObject "-FILE_NAME=$i" "-WORK_REP_NAME=${p:resource/work_repo}" "-IMPORT_MODE=SYNONYM_INSERT_UPDATE"
+done  
+   
+else
+   echo "Nothing to do loadplan."
+fi
